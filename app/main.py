@@ -15,6 +15,7 @@ from app.routers import (
     livraisons,
     mesures,
     paiements,
+    statistiques,
     utilisateurs,
 )
 from app.validation import traduire_erreur
@@ -54,6 +55,7 @@ app.include_router(commandes.router, prefix="/api/v1")
 app.include_router(livraisons.router, prefix="/api/v1")
 app.include_router(mesures.router, prefix="/api/v1")
 app.include_router(paiements.router, prefix="/api/v1")
+app.include_router(statistiques.router, prefix="/api/v1")
 app.include_router(utilisateurs.router, prefix="/api/v1")
 
 
