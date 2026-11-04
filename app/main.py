@@ -1,10 +1,13 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.routers import auth
+from app.exceptions import ErreurMetier
+from app.routers import auth, utilisateurs
 
 app = FastAPI(
     title="API Atelier de Couture",
@@ -12,7 +15,29 @@ app = FastAPI(
     version="1.0.0",
 )
 
+@app.exception_handler(ErreurMetier)
+async def gerer_erreur_metier(request: Request, exc: ErreurMetier) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code, content={"detail": exc.detail}
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def gerer_validation(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Transforme les erreurs de validation Pydantic en un message texte unique."""
+    messages = []
+    for err in exc.errors():
+        champ = ".".join(
+            str(part) for part in err["loc"] if part not in ("body", "query", "path")
+        )
+        messages.append(f"{champ} : {err['msg']}" if champ else err["msg"])
+    return JSONResponse(status_code=422, content={"detail": " ; ".join(messages)})
+
+
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(utilisateurs.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Santé"])
