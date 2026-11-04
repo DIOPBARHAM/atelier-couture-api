@@ -5,14 +5,16 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import exiger_roles, get_current_user
-from app.models import Commande, Utilisateur
+from app.models import Commande, HistoriqueStatut, Utilisateur
 from app.models.enums import Role, StatutCommande
 from app.schemas.commande import (
     CommandeCreation,
     CommandeDetail,
     CommandeModification,
     CommandeResume,
+    HistoriqueLecture,
     LigneCreation,
+    StatutChangement,
 )
 from app.schemas.commun import Page
 from app.services import commande_service
@@ -100,3 +102,25 @@ def supprimer_ligne(
     _: Utilisateur = Depends(accueil_requis),
 ) -> Commande:
     return commande_service.supprimer_ligne(db, commande_id, ligne_id)
+
+
+@router.post("/{commande_id}/statut", response_model=CommandeDetail)
+def changer_statut(
+    commande_id: int,
+    donnees: StatutChangement,
+    db: Session = Depends(get_db),
+    acteur: Utilisateur = Depends(get_current_user),
+) -> Commande:
+    return commande_service.changer_statut(db, commande_id, donnees, acteur)
+
+
+@router.get(
+    "/{commande_id}/historique",
+    response_model=list[HistoriqueLecture],
+)
+def historique_commande(
+    commande_id: int,
+    db: Session = Depends(get_db),
+    _: Utilisateur = Depends(get_current_user),
+) -> list[HistoriqueStatut]:
+    return commande_service.obtenir(db, commande_id).historique

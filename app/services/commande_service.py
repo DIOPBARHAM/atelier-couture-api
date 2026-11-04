@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.exceptions import Conflit, DonneesInvalides, NonTrouve
+from app.exceptions import AccesInterdit, Conflit, DonneesInvalides, NonTrouve
 from app.models import (
     Client,
     Commande,
@@ -311,6 +311,62 @@ def supprimer_ligne(
 
     commande.lignes.remove(ligne)
     _recalculer(commande)
+    db.commit()
+    db.refresh(commande)
+    return commande
+
+
+def _liste_possibles(statut: StatutCommande) -> str:
+    if statut == StatutCommande.terminee:
+        return "livree (uniquement via la confirmation de livraison)"
+    possibles = sorted(s.value for s in TRANSITIONS[statut])
+    return ", ".join(possibles) if possibles else "aucun (statut final)"
+
+
+def changer_statut(
+    db: Session,
+    commande_id: int,
+    donnees: StatutChangement,
+    acteur: Utilisateur,
+) -> Commande:
+    commande = obtenir(db, commande_id)
+    actuel = commande.statut
+    nouveau = donnees.statut
+    commentaire = (donnees.commentaire or "").strip() or None
+
+    if acteur.role == Role.tailleur and nouveau == StatutCommande.annulee:
+        raise AccesInterdit("Le rôle tailleur ne peut pas annuler une commande")
+    if nouveau == actuel:
+        raise Conflit(f"La commande est déjà au statut {actuel.value}")
+    if nouveau == StatutCommande.livree:
+        raise Conflit(
+            "Le statut livree ne peut pas être posé directement : "
+            "utilisez la confirmation de livraison"
+        )
+    if nouveau not in TRANSITIONS[actuel]:
+        raise Conflit(
+            f"Transition interdite : {actuel.value} -> {nouveau.value}. "
+            f"Statuts possibles : {_liste_possibles(actuel)}"
+        )
+    if (
+        nouveau == StatutCommande.annulee
+        and commande.montant_paye > 0
+        and commentaire is None
+    ):
+        raise DonneesInvalides(
+            "Annuler une commande avec acompte exige un commentaire expliquant "
+            "la gestion financière"
+        )
+
+    commande.statut = nouveau
+    commande.historique.append(
+        HistoriqueStatut(
+            ancien_statut=actuel,
+            nouveau_statut=nouveau,
+            commentaire=commentaire,
+            utilisateur_id=acteur.id,
+        )
+    )
     db.commit()
     db.refresh(commande)
     return commande
