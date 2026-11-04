@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.exceptions import ErreurMetier
 from app.routers import auth, utilisateurs
+from app.validation import traduire_erreur
 
 app = FastAPI(
     title="API Atelier de Couture",
@@ -26,13 +27,14 @@ async def gerer_erreur_metier(request: Request, exc: ErreurMetier) -> JSONRespon
 async def gerer_validation(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    """Transforme les erreurs de validation Pydantic en un message texte unique."""
+    """Transforme les erreurs de validation Pydantic en un message texte français."""
     messages = []
     for err in exc.errors():
         champ = ".".join(
             str(part) for part in err["loc"] if part not in ("body", "query", "path")
         )
-        messages.append(f"{champ} : {err['msg']}" if champ else err["msg"])
+        texte = traduire_erreur(err)
+        messages.append(f"{champ} : {texte}" if champ else texte)
     return JSONResponse(status_code=422, content={"detail": " ; ".join(messages)})
 
 
