@@ -1,8 +1,15 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import ModePaiement
+
+
+class PaiementCreation(BaseModel):
+    montant: int = Field(gt=0)
+    mode: ModePaiement
+    reference: str | None = Field(default=None, max_length=100)
+    date_paiement: date | None = None
 
 
 class PaiementLecture(BaseModel):

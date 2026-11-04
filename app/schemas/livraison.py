@@ -1,8 +1,20 @@
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import ModeLivraison, StatutLivraison
+
+
+class LivraisonPlanification(BaseModel):
+    mode: ModeLivraison
+    adresse: str | None = Field(default=None, max_length=255)
+    livreur: str | None = Field(default=None, max_length=100)
+    date_prevue: date | None = None
+    notes: str | None = None
+
+
+class LivraisonConfirmation(BaseModel):
+    autoriser_solde_impaye: bool = False
 
 
 class LivraisonLecture(BaseModel):
