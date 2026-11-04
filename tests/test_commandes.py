@@ -473,3 +473,101 @@ def test_order_write_routes_require_accueil_and_reads_require_auth(
 
     assert create.status_code == 403
     assert listing.status_code == 200
+
+
+def test_status_workflow_validates_transitions_and_exposes_history(
+    commande_context,
+) -> None:
+    client, _, records = commande_context
+    created = create_order(client, records)
+    order_id = created.json()["id"]
+
+    invalid = client.post(
+        f"/api/v1/commandes/{order_id}/statut",
+        json={"statut": "terminee"},
+    )
+    transition = client.post(
+        f"/api/v1/commandes/{order_id}/statut",
+        json={"statut": "en_coupe", "commentaire": "  coupe démarrée  "},
+    )
+    same_status = client.post(
+        f"/api/v1/commandes/{order_id}/statut",
+        json={"statut": "en_coupe"},
+    )
+    direct_delivery = client.post(
+        f"/api/v1/commandes/{order_id}/statut",
+        json={"statut": "livree"},
+    )
+    history = client.get(f"/api/v1/commandes/{order_id}/historique")
+    missing_history = client.get("/api/v1/commandes/9999/historique")
+
+    assert invalid.status_code == 409
+    assert "Statuts possibles : annulee, en_coupe" in invalid.json()["detail"]
+    assert transition.status_code == 200
+    assert transition.json()["statut"] == "en_coupe"
+    assert same_status.status_code == 409
+    assert "déjà au statut en_coupe" in same_status.json()["detail"]
+    assert direct_delivery.status_code == 409
+    assert "confirmation de livraison" in direct_delivery.json()["detail"]
+    assert history.status_code == 200
+    assert len(history.json()) == 2
+    assert history.json()[0]["ancien_statut"] is None
+    assert history.json()[0]["nouveau_statut"] == "en_attente"
+    assert history.json()[1]["ancien_statut"] == "en_attente"
+    assert history.json()[1]["nouveau_statut"] == "en_coupe"
+    assert history.json()[1]["commentaire"] == "coupe démarrée"
+    assert history.json()[1]["utilisateur_id"] == records["accueil"].id
+    assert missing_history.status_code == 404
+
+
+def test_cancellation_requires_authorization_and_comment_when_paid(
+    commande_context,
+    monkeypatch,
+) -> None:
+    client, session, records = commande_context
+    created = create_order(client, records)
+    order_id = created.json()["id"]
+    order = session.get(Commande, order_id)
+    assert order is not None
+    order.montant_paye = 10000
+    session.commit()
+
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        get_current_user,
+        lambda: records["tailleur"],
+    )
+    forbidden = client.post(
+        f"/api/v1/commandes/{order_id}/statut",
+        json={"statut": "annulee", "commentaire": "Client remboursé"},
+    )
+    assert forbidden.status_code == 403
+
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        get_current_user,
+        lambda: records["accueil"],
+    )
+    missing_comment = client.post(
+        f"/api/v1/commandes/{order_id}/statut",
+        json={"statut": "annulee"},
+    )
+    blank_comment = client.post(
+        f"/api/v1/commandes/{order_id}/statut",
+        json={"statut": "annulee", "commentaire": "   "},
+    )
+    cancelled = client.post(
+        f"/api/v1/commandes/{order_id}/statut",
+        json={
+            "statut": "annulee",
+            "commentaire": "  Acompte remboursé au client  ",
+        },
+    )
+
+    assert missing_comment.status_code == 422
+    assert "exige un commentaire" in missing_comment.json()["detail"]
+    assert blank_comment.status_code == 422
+    assert cancelled.status_code == 200
+    assert cancelled.json()["statut"] == "annulee"
+    history = client.get(f"/api/v1/commandes/{order_id}/historique")
+    assert history.json()[-1]["commentaire"] == "Acompte remboursé au client"
