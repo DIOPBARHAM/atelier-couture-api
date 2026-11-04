@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.exceptions import ErreurMetier
-from app.routers import auth, utilisateurs
+from app.routers import auth, catalogue, utilisateurs
 from app.validation import traduire_erreur
 
 app = FastAPI(
@@ -39,6 +39,7 @@ async def gerer_validation(
 
 
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(catalogue.router, prefix="/api/v1")
 app.include_router(utilisateurs.router, prefix="/api/v1")
 
 
