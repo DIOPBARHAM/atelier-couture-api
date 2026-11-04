@@ -47,3 +47,10 @@ from app.validation import traduire_erreur
 )
 def test_traduire_erreur(error: dict, expected: str) -> None:
     assert traduire_erreur(error) == expected
+
+
+def test_traduction_strictement_inferieur():
+    from app.validation import traduire_erreur
+
+    message = traduire_erreur({"type": "less_than", "ctx": {"lt": 5}})
+    assert message == "doit être strictement inférieur à 5"
