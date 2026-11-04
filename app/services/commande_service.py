@@ -63,7 +63,7 @@ def _total_brut(lignes: list[LigneCommande]) -> int:
     return sum(ligne.quantite * ligne.prix_unitaire for ligne in lignes)
 
 
-def _recalculer(commande: Commande) -> None:
+def recalculer(commande: Commande) -> None:
     """RG7 : les montants sont calculés par le serveur."""
     commande.montant_total = _total_brut(commande.lignes) - commande.remise
     commande.montant_paye = sum(paiement.montant for paiement in commande.paiements)
@@ -265,7 +265,7 @@ def modifier(
 
     for champ, valeur in changements.items():
         setattr(commande, champ, valeur)
-    _recalculer(commande)
+    recalculer(commande)
     db.commit()
     db.refresh(commande)
     return commande
@@ -279,7 +279,7 @@ def ajouter_ligne(
         raise Conflit("Les lignes ne sont modifiables que pour une commande en attente")
     ligne, _ = _construire_ligne(db, donnees)
     commande.lignes.append(ligne)
-    _recalculer(commande)
+    recalculer(commande)
     db.commit()
     db.refresh(commande)
     return commande
@@ -310,7 +310,7 @@ def supprimer_ligne(
         )
 
     commande.lignes.remove(ligne)
-    _recalculer(commande)
+    recalculer(commande)
     db.commit()
     db.refresh(commande)
     return commande

@@ -7,7 +7,15 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.exceptions import ErreurMetier
-from app.routers import auth, catalogue, clients, commandes, mesures, utilisateurs
+from app.routers import (
+    auth,
+    catalogue,
+    clients,
+    commandes,
+    mesures,
+    paiements,
+    utilisateurs,
+)
 from app.validation import traduire_erreur
 
 app = FastAPI(
@@ -43,6 +51,7 @@ app.include_router(catalogue.router, prefix="/api/v1")
 app.include_router(clients.router, prefix="/api/v1")
 app.include_router(commandes.router, prefix="/api/v1")
 app.include_router(mesures.router, prefix="/api/v1")
+app.include_router(paiements.router, prefix="/api/v1")
 app.include_router(utilisateurs.router, prefix="/api/v1")
 
 
