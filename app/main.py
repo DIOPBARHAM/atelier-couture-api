@@ -4,12 +4,15 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.routers import auth
 
 app = FastAPI(
     title="API Atelier de Couture",
     description="Gestion des clients, mesures, commandes, paiements et livraisons.",
     version="1.0.0",
 )
+
+app.include_router(auth.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Santé"])
