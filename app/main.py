@@ -33,8 +33,8 @@ async def gerer_validation(
         champ = ".".join(
             str(part) for part in err["loc"] if part not in ("body", "query", "path")
         )
-        texte = traduire_erreur(err)
-        messages.append(f"{champ} : {texte}" if champ else texte)
+        msg = traduire_erreur(err).removeprefix("Value error, ")
+        messages.append(f"{champ} : {msg}" if champ else msg)
     return JSONResponse(status_code=422, content={"detail": " ; ".join(messages)})
 
 
