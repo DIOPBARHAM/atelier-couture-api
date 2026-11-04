@@ -58,6 +58,14 @@ class Commande(Base):
     def solde(self) -> int:
         return self.montant_total - self.montant_paye
 
+    @property
+    def en_retard(self) -> bool:
+        """RG11 : date prévue dépassée et commande ni livrée ni annulée."""
+        return (
+            self.date_livraison_prevue < date.today()
+            and self.statut not in (StatutCommande.livree, StatutCommande.annulee)
+        )
+
 
 class LigneCommande(Base):
     __tablename__ = "lignes_commande"
@@ -73,6 +81,10 @@ class LigneCommande(Base):
 
     commande: Mapped["Commande"] = relationship(back_populates="lignes")
     type_vetement: Mapped["TypeVetement"] = relationship()
+
+    @property
+    def sous_total(self) -> int:
+        return self.quantite * self.prix_unitaire
 
 
 class HistoriqueStatut(Base):

@@ -6,6 +6,8 @@ def traduire_erreur(err: dict) -> str:
 
     if type_erreur == "missing":
         return "champ obligatoire"
+    if type_erreur == "too_short":
+        return f"doit contenir au moins {ctx.get('min_length')} élément(s)"
     if type_erreur == "string_too_short":
         return f"doit contenir au moins {ctx.get('min_length')} caractère(s)"
     if type_erreur == "string_too_long":
