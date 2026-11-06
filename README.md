@@ -176,7 +176,13 @@ pytest --cov=app --cov-report=term-missing  # avec la couverture
 docker compose exec api pytest -q           # dans le conteneur
 ```
 
-Les tests utilisent SQLite en mémoire. `tests/test_scenario_demo.py` déroule le scénario de démonstration complet.
+Les tests utilisent SQLite en mémoire pour être rapides et indépendants de Docker.
+Le schéma de production est défini par les migrations Alembic (`alembic check` ne
+détecte aucune différence avec les modèles) et est appliqué au démarrage de
+`docker compose up --build`. Les tests unitaires des services les appellent
+directement ; les tests d'intégration passent par `TestClient` et vérifient les
+codes HTTP et les droits par rôle. `tests/test_scenario_demo.py` déroule le scénario
+de démonstration complet.
 
 ## Scénario de démonstration
 
